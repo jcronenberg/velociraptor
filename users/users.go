@@ -186,3 +186,18 @@ func GetUserOptions(config_obj *config_proto.Config, username string) (
 	}
 	return options, err
 }
+
+func DeleteUser(config_obj *config_proto.Config, username string) error {
+
+	user_path_manager := paths.UserPathManager{Name: username}
+	db, err := datastore.GetDB(config_obj)
+	if err != nil {
+		return err
+	}
+
+	err = db.DeleteSubject(config_obj, user_path_manager.Path())
+	if err != nil {
+		return err
+	}
+	return nil
+}

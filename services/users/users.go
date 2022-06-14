@@ -34,6 +34,8 @@ import (
 	datastore "www.velocidex.com/golang/velociraptor/datastore"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/acls"
+	acl_proto "www.velocidex.com/golang/velociraptor/acls/proto"
 )
 
 const (
@@ -152,7 +154,7 @@ func (self UserManager) ListUsers() ([]*api_proto.VelociraptorUser, error) {
 		}
 
 		username := child.Base()
-		user_record, err := self.GetUser(username)
+		user_record, err := self.GetUserWithPermissions(username)
 		if err == nil {
 			result = append(result, user_record)
 		}
@@ -265,6 +267,46 @@ func (self UserManager) GetUserOptions(username string) (
 	return options, err
 }
 
+// Return the user record with permission but without password hashes
+func (self UserManager) GetUserWithPermissions(username string) (
+	*api_proto.VelociraptorUser, error) {
+	result, err := self.GetUser(username)
+	if err != nil {
+		return nil, err
+	}
+
+	policy, err := acls.GetPolicy(self.config_obj, username)
+	if err != nil {
+		return result, nil
+	}
+	result.Permissions = policy
+
+	return result, nil
+}
+
+func (self UserManager) DeleteUser(username string) error {
+
+	user_path_manager := paths.UserPathManager{Name: username}
+	db, err := datastore.GetDB(self.config_obj)
+	if err != nil {
+		return err
+	}
+
+	err = db.DeleteSubject(self.config_obj, user_path_manager.Path())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (self UserManager) SetUserPermissions(username string, permissions *acl_proto.ApiClientACL) error {
+	err := acls.SetPolicy(self.config_obj, username, permissions)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func StartUserManager(
 	ctx context.Context,
 	wg *sync.WaitGroup,
@@ -291,3 +333,4 @@ func init() {
 	}
 	services.RegisterUserManager(service)
 }
+

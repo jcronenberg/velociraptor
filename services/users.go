@@ -22,6 +22,7 @@ import (
 
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	acl_proto "www.velocidex.com/golang/velociraptor/acls/proto"
 )
 
 var (
@@ -42,6 +43,10 @@ type UserManager interface {
 	// Favorites are stored per org.
 	GetFavorites(config_obj *config_proto.Config,
 		principal, fav_type string) (*api_proto.Favorites, error)
+
+	DeleteUser(username string) error
+	GetUserWithPermissions(username string) (*api_proto.VelociraptorUser, error)
+	SetUserPermissions(username string, permissions *acl_proto.ApiClientACL) error
 }
 
 func RegisterUserManager(dispatcher UserManager) {
